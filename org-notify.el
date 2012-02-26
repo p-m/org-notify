@@ -57,7 +57,10 @@
 
 (eval-when-compile (require 'cl))
 (require 'org-element)
-(require 'appt)
+
+(declare-function appt-delete-window         "appt"           ())
+(declare-function appt-select-lowest-window  "appt"           ())
+(declare-function notifications-notify       "notifications"  (&rest params))
 
 (defconst orgntf-actions '("done" "done" "hour" "one hour later" "day"
                            "one day later" "week" "one week later")
@@ -123,26 +126,16 @@
 
 (defun orgntf-maybe-too-late (diff period heading)
   "Print waring message, when notified significantly later than defined by
-  PERIOD."
+PERIOD."
   (if (> (/ diff period) 1.5)
       (message "Warning: notification for \"%s\" behind schedule!" heading))
   t)
 
-(defun orgntf-time-measure (func)
-  "Measure execution time of FUNC, when verbose output is active."
-  (if orgntf-verbose
-      (let ((start (org-float-time))
-            (res (funcall func)))
-        (message "Execution time of `%s': %0.3fs" (symbol-name func)
-                 (- (org-float-time) start))
-        res)
-    (funcall func)))
-
 (defun orgntf-process ()
   "Process the todo-list, and possibly notify user about upcoming or
-  forgotten tasks."
+forgotten tasks."
   (macrolet ((prm (k) `(plist-get prms ,k))  (td (k) `(plist-get todo ,k)))
-    (dolist (todo (orgntf-time-measure 'orgntf-todo-list))
+    (dolist (todo (orgntf-todo-list))
       (let* ((deadline (td :deadline))  (heading (td :heading))
              (uid (td :uid))            (last-run-sym
                                          (intern (concat ":last-run-" uid))))
@@ -165,33 +158,33 @@
 
 (defun org-notify-add (name &rest params)
   "Add a new notification type. The NAME can be used in Org-mode property
-  `notify'. If NAME is `default', the notification type applies for todo items
-  without the `notify' property. This file predefines such a default
-  notification type.
+`notify'. If NAME is `default', the notification type applies for todo items
+without the `notify' property. This file predefines such a default
+notification type.
 
-  Each element of PARAMS is a list with parameters for a given time
-  distance to the deadline. This distance must increase from one element to
-  the next.
-  List of possible parameters:
-    :time      Time distance to deadline, when this type of notification shall
-               start. It's a string: an integral value (positive or negative)
-               followed by a unit (s, m, h, d, w, M).
-    :actions   A function or a list of functions to be called to notify the
-               user.
-    :period    Optional: can be used to repeat the actions periodically. Same
-               format as :time.
-    :duration  Some actions use this parameter to specify the duration of the
-               notification. It's an integral number in seconds.
+Each element of PARAMS is a list with parameters for a given time
+distance to the deadline. This distance must increase from one element to
+the next.
+List of possible parameters:
+  :time      Time distance to deadline, when this type of notification shall
+             start. It's a string: an integral value (positive or negative)
+             followed by a unit (s, m, h, d, w, M).
+  :actions   A function or a list of functions to be called to notify the
+             user.
+  :period    Optional: can be used to repeat the actions periodically. Same
+             format as :time.
+  :duration  Some actions use this parameter to specify the duration of the
+             notification. It's an integral number in seconds.
 
-  For the actions, you can use your own functions or some of the predefined
-  ones, whose names are prefixed with `org-notify-action-'."
+For the actions, you can use your own functions or some of the predefined
+ones, whose names are prefixed with `org-notify-action-'."
   (setq orgntf-map (plist-put orgntf-map name params)))
 
 (defun org-notify-start (&optional secs)
   "Start the notification daemon. If SECS is positive, it's the period in
-  seconds for processing the notifications, and if negative, notifications
-  will be checked only when emacs is idle for -SECS seconds. The default value
-  for SECS is 50."
+seconds for processing the notifications, and if negative, notifications
+will be checked only when emacs is idle for -SECS seconds. The default value
+for SECS is 50."
   (if orgntf-timer
       (org-notify-stop))
   (setq secs (or secs 50)
@@ -257,6 +250,7 @@
 
 (defun org-notify-action-window (plist)
   "Pop up a window, mostly copied from `appt-disp-window'."
+  (require 'appt)
   (save-excursion
     (macrolet ((get (k) `(plist-get plist ,k)))
       (let ((this-window (selected-window))
