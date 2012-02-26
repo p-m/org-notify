@@ -61,29 +61,29 @@
 (declare-function appt-delete-window         "appt"           ())
 (declare-function notifications-notify       "notifications"  (&rest params))
 
-(defconst orgntf-actions '("done" "done" "hour" "one hour later" "day"
-                           "one day later" "week" "one week later")
+(defconst org-notify-actions '("done" "done" "hour" "one hour later" "day"
+                               "one day later" "week" "one week later")
   "Possible actions for call-back functions.")
 
-(defconst orgntf-window-buffer-name "*org-notify-%s*"
+(defconst org-notify-window-buffer-name "*org-notify-%s*"
   "Buffer-name for the `org-notify-action-window' function.")
 
-(defvar orgntf-map nil
+(defvar org-notify-map nil
   "Mapping between names and parameter lists.")
 
-(defvar orgntf-timer nil
+(defvar org-notify-timer nil
   "Timer of the notification daemon.")
 
-(defvar orgntf-parse-file nil
+(defvar org-notify-parse-file nil
   "Current file, that `org-element-parse-buffer' is parsing.")
 
-(defvar orgntf-on-action-map nil
+(defvar org-notify-on-action-map nil
   "Mapping between on-action identifiers and parameter lists.")
 
-(defvar orgntf-verbose t
+(defvar org-notify-verbose t
   "Print some useful information for developers.")
 
-(defun orgntf-string->seconds (str)
+(defun org-notify-string->seconds (str)
   "Convert time string STR to number of seconds."
   (when str
     (let* ((conv `(("s" . 1) ("m" . 60) ("h" . ,(* 60 60))
@@ -97,7 +97,7 @@
          (cdr (assoc (match-string 3 str) conv))
          (if (= (length (match-string 1 str)) 1) -1 1)))))
 
-(defun orgntf-make-todo (heading &rest ignored)
+(defun org-notify-make-todo (heading &rest ignored)
   "Create one todo item."
   (macrolet ((get (k) `(plist-get list ,k))
              (pr (k v) `(setq result (plist-put result ,k ,v))))
@@ -106,54 +106,53 @@
            result)
       (when (and (eq (get :todo-type) 'todo) heading deadline)
         (pr :heading heading)     (pr :notify (intern notify))
-        (pr :begin (get :begin))  (pr :file orgntf-parse-file)
+        (pr :begin (get :begin))  (pr :file org-notify-parse-file)
         (pr :timestamp deadline)  (pr :uid (md5 (concat heading deadline)))
         (pr :deadline (- (org-time-string-to-seconds deadline)
                          (org-float-time))))
       result)))
 
-(defun orgntf-todo-list ()
+(defun org-notify-todo-list ()
   "Create the todo-list."
   (let ((files (org-agenda-files 'unrestricted)) result)
-    (dolist (orgntf-parse-file files result)
+    (dolist (org-notify-parse-file files result)
       (save-excursion
-        (with-current-buffer (find-file-noselect orgntf-parse-file)
+        (with-current-buffer (find-file-noselect org-notify-parse-file)
           (setq result (append result (org-element-map
                                        (org-element-parse-buffer 'headline)
-                                       'headline 'orgntf-make-todo))))))
+                                       'headline 'org-notify-make-todo))))))
     result))
 
-(defun orgntf-maybe-too-late (diff period heading)
+(defun org-notify-maybe-too-late (diff period heading)
   "Print waring message, when notified significantly later than defined by
 PERIOD."
   (if (> (/ diff period) 1.5)
       (message "Warning: notification for \"%s\" behind schedule!" heading))
   t)
 
-(defun orgntf-process ()
+(defun org-notify-process ()
   "Process the todo-list, and possibly notify user about upcoming or
 forgotten tasks."
   (macrolet ((prm (k) `(plist-get prms ,k))  (td (k) `(plist-get todo ,k)))
-    (dolist (todo (orgntf-todo-list))
+    (dolist (todo (org-notify-todo-list))
       (let* ((deadline (td :deadline))  (heading (td :heading))
              (uid (td :uid))            (last-run-sym
                                          (intern (concat ":last-run-" uid))))
-        (dolist (prms (plist-get orgntf-map (td :notify)))
-          (when (< deadline (orgntf-string->seconds (prm :time)))
-            (let ((period (orgntf-string->seconds (prm :period)))
+        (dolist (prms (plist-get org-notify-map (td :notify)))
+          (when (< deadline (org-notify-string->seconds (prm :time)))
+            (let ((period (org-notify-string->seconds (prm :period)))
                   (last-run (prm last-run-sym))  (now (org-float-time))
                   (actions (prm :actions))       diff  plist)
               (when (or (not last-run)
                         (and period (< period (setq diff (- now last-run)))
-                             (orgntf-maybe-too-late diff period heading)))
+                             (org-notify-maybe-too-late diff period heading)))
                 (setq prms (plist-put prms last-run-sym now)
                       plist (append todo prms))
                 (unless (listp actions)
                   (setq actions (list actions)))
                 (dolist (action actions)
                   (funcall action plist))))
-            (return))))))
-)
+            (return)))))))
 
 (defun org-notify-add (name &rest params)
   "Add a new notification type. The NAME can be used in Org-mode property
@@ -177,27 +176,28 @@ List of possible parameters:
 
 For the actions, you can use your own functions or some of the predefined
 ones, whose names are prefixed with `org-notify-action-'."
-  (setq orgntf-map (plist-put orgntf-map name params)))
+  (setq org-notify-map (plist-put org-notify-map name params)))
 
 (defun org-notify-start (&optional secs)
   "Start the notification daemon. If SECS is positive, it's the period in
 seconds for processing the notifications, and if negative, notifications
 will be checked only when emacs is idle for -SECS seconds. The default value
 for SECS is 50."
-  (if orgntf-timer
+  (if org-notify-timer
       (org-notify-stop))
   (setq secs (or secs 50)
-        orgntf-timer (if (< secs 0)
-                         (run-with-idle-timer (* -1 secs) t 'orgntf-process)
-                       (run-with-timer secs secs 'orgntf-process))))
+        org-notify-timer (if (< secs 0)
+                             (run-with-idle-timer (* -1 secs) t
+                                                  'org-notify-process)
+                           (run-with-timer secs secs 'org-notify-process))))
 
 (defun org-notify-stop ()
   "Stop the notification daemon."
-  (when orgntf-timer
-      (cancel-timer orgntf-timer)
-      (setq orgntf-timer nil)))
+  (when org-notify-timer
+      (cancel-timer org-notify-timer)
+      (setq org-notify-timer nil)))
 
-(defun orgntf-on-action (plist key)
+(defun org-notify-on-action (plist key)
   "User wants to see action."
   (save-excursion
     (with-current-buffer (find-file-noselect (plist-get plist :file))
@@ -210,28 +210,28 @@ for SECS is 50."
        ((string-equal key "day")   (org-timestamp-up-day))
        ((string-equal key "week")  (org-timestamp-change 7 'day))))))
 
-(defun orgntf-on-action-notify (id key)
+(defun org-notify-on-action-notify (id key)
   "User wants to see action after mouse-click in notify window."
-  (orgntf-on-action (plist-get orgntf-on-action-map id) key)
-  (orgntf-on-close id nil))
+  (org-notify-on-action (plist-get org-notify-on-action-map id) key)
+  (org-notify-on-close id nil))
 
-(defun orgntf-on-action-button (button)
+(defun org-notify-on-action-button (button)
   "User wants to see action after button activation."
   (macrolet ((get (k) `(button-get button ,k)))
-    (orgntf-on-action (get 'plist) (get 'key))
-    (orgntf-delete-window (get 'buffer))
+    (org-notify-on-action (get 'plist) (get 'key))
+    (org-notify-delete-window (get 'buffer))
     (cancel-timer (get 'timer))))
 
-(defun orgntf-delete-window (buffer)
+(defun org-notify-delete-window (buffer)
   "Delete the notification window."
   (require 'appt)
   (let ((appt-buffer-name buffer)
         (appt-audible nil))
     (appt-delete-window)))
 
-(defun orgntf-on-close (id reason)
+(defun org-notify-on-close (id reason)
   "Notification window has been closed."
-  (setq orgntf-on-action-map (plist-put orgntf-on-action-map id nil)))
+  (setq org-notify-on-action-map (plist-put org-notify-on-action-map id nil)))
 
 (defun org-notify-action-message (plist)
   "Print a message."
@@ -249,9 +249,9 @@ for SECS is 50."
 ; todo
 )
 
-(defun orgntf-select-highest-window ()
+(defun org-notify-select-highest-window ()
   "Select the highest window on the frame, that is not is not an
-org-notify window. Copied mostly from `appt-select-lowest-window'."
+org-notify window. Mostly copied from `appt-select-lowest-window'."
   (let ((highest-window (selected-window))
         (bottom-edge (nth 3 (window-edges)))
         next-bottom-edge)
@@ -272,7 +272,7 @@ org-notify window. Copied mostly from `appt-select-lowest-window'."
     (macrolet ((get (k) `(plist-get plist ,k)))
       (let ((this-window (selected-window))
             (buf (get-buffer-create
-                  (format orgntf-window-buffer-name (get :uid)))))
+                  (format org-notify-window-buffer-name (get :uid)))))
         (when (minibufferp)
           (other-window 1)
           (and (minibufferp) (display-multi-frame-p) (other-frame 1)))
@@ -280,7 +280,7 @@ org-notify window. Copied mostly from `appt-select-lowest-window'."
             (progn (set-buffer buf) (display-buffer buf))
           (unless (or (special-display-p (buffer-name buf))
                       (same-window-p (buffer-name buf)))
-            (orgntf-select-highest-window)
+            (org-notify-select-highest-window)
             (when (>= (window-height) (* 2 window-min-height))
               (select-window (split-window nil nil 'above))))
           (switch-to-buffer buf))
@@ -289,12 +289,12 @@ org-notify window. Copied mostly from `appt-select-lowest-window'."
         (insert (format "TODO: %s, in %d seconds.\n"
                         (get :heading) (get :deadline)))
         (let ((timer (run-with-timer (or (get :duration) 10) nil
-                                     'orgntf-delete-window buf)))
-          (dotimes (i (/ (length orgntf-actions) 2))
-            (let ((key (nth (* i 2) orgntf-actions))
-                  (text (nth (1+ (* i 2)) orgntf-actions)))
-              (insert-button text 'action 'orgntf-on-action-button 'key key
-                             'buffer buf 'plist plist 'timer timer)
+                                     'org-notify-delete-window buf)))
+          (dotimes (i (/ (length org-notify-actions) 2))
+            (let ((key (nth (* i 2) org-notify-actions))
+                  (text (nth (1+ (* i 2)) org-notify-actions)))
+              (insert-button text 'action 'org-notify-on-action-button
+                             'key key 'buffer buf 'plist plist 'timer timer)
               (insert "    "))))
         (shrink-window-if-larger-than-buffer (get-buffer-window buf t))
         (set-buffer-modified-p nil)       (setq buffer-read-only t)
@@ -311,10 +311,11 @@ org-notify window. Copied mostly from `appt-select-lowest-window'."
               :title     (plist-get plist :heading)
               :body      (format "In %d seconds." (plist-get plist :deadline))
               :timeout   (if duration (* duration 1000))
-              :actions   orgntf-actions
-              :on-action 'orgntf-on-action-notify
-              :on-close  'orgntf-on-close)))
-    (setq orgntf-on-action-map (plist-put orgntf-on-action-map id plist))))
+              :actions   org-notify-actions
+              :on-action 'org-notify-on-action-notify
+              :on-close  'org-notify-on-close)))
+    (setq org-notify-on-action-map
+          (plist-put org-notify-on-action-map id plist))))
 
 (org-notify-add 'default '(:time "1h" :actions org-notify-action-message
                                  :period "2m"))
