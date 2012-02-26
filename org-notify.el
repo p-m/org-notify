@@ -59,7 +59,6 @@
 (require 'org-element)
 
 (declare-function appt-delete-window         "appt"           ())
-(declare-function appt-select-lowest-window  "appt"           ())
 (declare-function notifications-notify       "notifications"  (&rest params))
 
 (defconst orgntf-actions '("done" "done" "hour" "one hour later" "day"
@@ -225,7 +224,9 @@ for SECS is 50."
 
 (defun orgntf-delete-window (buffer)
   "Delete the notification window."
-  (let ((appt-buffer-name buffer)  (appt-audible nil))
+  (require 'appt)
+  (let ((appt-buffer-name buffer)
+        (appt-audible nil))
     (appt-delete-window)))
 
 (defun orgntf-on-close (id reason)
@@ -248,9 +249,25 @@ for SECS is 50."
 ; todo
 )
 
+(defun orgntf-select-highest-window ()
+  "Select the highest window on the frame, that is not is not an
+org-notify window. Copied mostly from `appt-select-lowest-window'."
+  (let ((highest-window (selected-window))
+        (bottom-edge (nth 3 (window-edges)))
+        next-bottom-edge)
+    (walk-windows (lambda (w)
+                    (when (and
+                           (not (string-match "^\\*org-notify-.*\\*$"
+                                              (buffer-name
+                                               (window-buffer w))))
+                           (> bottom-edge (setq next-bottom-edge
+                                                (nth 3 (window-edges w)))))
+                      (setq bottom-edge next-bottom-edge
+                            highest-window w))) 'nomini)
+    (select-window highest-window)))
+
 (defun org-notify-action-window (plist)
   "Pop up a window, mostly copied from `appt-disp-window'."
-  (require 'appt)
   (save-excursion
     (macrolet ((get (k) `(plist-get plist ,k)))
       (let ((this-window (selected-window))
@@ -263,9 +280,9 @@ for SECS is 50."
             (progn (set-buffer buf) (display-buffer buf))
           (unless (or (special-display-p (buffer-name buf))
                       (same-window-p (buffer-name buf)))
-            (appt-select-lowest-window)
+            (orgntf-select-highest-window)
             (when (>= (window-height) (* 2 window-min-height))
-              (select-window (split-window))))
+              (select-window (split-window nil nil 'above))))
           (switch-to-buffer buf))
         (setq buffer-read-only nil  buffer-undo-list t)
         (erase-buffer)
