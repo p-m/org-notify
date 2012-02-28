@@ -72,14 +72,11 @@
 (defvar org-notify-timer nil
   "Timer of the notification daemon.")
 
-(defvar org-notify-parse-file nil
+(defvar org-notify-parse-file
   "Current file, that `org-element-parse-buffer' is parsing.")
 
 (defvar org-notify-on-action-map nil
   "Mapping between on-action identifiers and parameter lists.")
-
-(defvar org-notify-verbose t
-  "Print some useful information for developers.")
 
 (defun org-notify-string->seconds (str)
   "Convert time string STR to number of seconds."
