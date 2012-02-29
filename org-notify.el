@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012  Free Software Foundation, Inc.
 
 ;; Author: Peter Münster <pmrb@free.fr>
-;; Keywords: notification, todo-list, alarm
+;; Keywords: notification, todo-list, alarm, reminder, pop-up
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -56,8 +56,9 @@
 (eval-when-compile (require 'cl))
 (require 'org-element)
 
-(declare-function appt-delete-window         "appt"           ())
-(declare-function notifications-notify       "notifications"  (&rest params))
+(declare-function appt-delete-window    "appt"          ())
+(declare-function notifications-notify  "notifications" (&rest prms))
+(declare-function article-lapsed-string "gnus-art"      (t &optional ms))
 
 (defconst org-notify-actions '("done" "done" "hour" "one hour later" "day"
                                "one day later" "week" "one week later")
@@ -300,16 +301,25 @@ org-notify window. Mostly copied from `appt-select-lowest-window'."
         (set-buffer-modified-p nil)       (setq buffer-read-only t)
         (raise-frame (selected-frame))    (select-window this-window)))))
 
+(defun org-notify-body-text (deadline)
+  "Make human readable string for remaining time to deadline.
+This time in seconds is provided by DEADLINE."
+  (require 'gnus-art)
+  (replace-regexp-in-string
+   " in the future" ""
+   (article-lapsed-string (time-add (current-time)
+                                    (seconds-to-time deadline))
+                          2)))
+
 (defun org-notify-action-notify (plist)
   "Pop up a notification window."
-; todo: better text for body, take a look at article-lapsed-string
 ; todo perhaps: dbus-unregister-service for NotificationClosed to
 ; prevent resetting idle-time
   (require 'notifications)
   (let* ((duration (plist-get plist :duration))
          (id (notifications-notify
               :title     (plist-get plist :heading)
-              :body      (format "In %d seconds." (plist-get plist :deadline))
+              :body      (org-notify-body-text (plist-get plist :deadline))
               :timeout   (if duration (* duration 1000))
               :actions   org-notify-actions
               :on-action 'org-notify-on-action-notify
@@ -317,8 +327,9 @@ org-notify window. Mostly copied from `appt-select-lowest-window'."
     (setq org-notify-on-action-map
           (plist-put org-notify-on-action-map id plist))))
 
+;;; Provide a minimal default setup.
 (org-notify-add 'default '(:time "1h" :actions org-notify-action-message
-                                 :period "2m"))
+                           :period "2m"))
 
 (provide 'org-notify)
 
