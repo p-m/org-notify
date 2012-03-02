@@ -245,10 +245,23 @@ for SECS is 50."
     (run-with-timer (or (plist-get plist :duration) 3) nil
                     'cancel-timer timer)))
 
+(defun org-notify-body-text (deadline)
+  "Make human readable string for remaining time to deadline.
+This time in seconds is provided by DEADLINE."
+  (require 'gnus-art)
+  (replace-regexp-in-string
+   " in the future" ""
+   (article-lapsed-string (time-add (current-time)
+                                    (seconds-to-time deadline))
+                          2)))
+
 (defun org-notify-action-email (plist)
   "Send email to user."
-; todo
-)
+  (compose-mail user-mail-address (concat "TODO: " (plist-get plist :heading)))
+  (insert (org-notify-body-text (plist-get plist :deadline)))
+  (funcall send-mail-function)
+  (flet ((yes-or-no-p (prompt) t))
+    (kill-buffer)))
 
 (defun org-notify-select-highest-window ()
   "Select the highest window on the frame, that is not is not an
@@ -300,16 +313,6 @@ org-notify window. Mostly copied from `appt-select-lowest-window'."
         (shrink-window-if-larger-than-buffer (get-buffer-window buf t))
         (set-buffer-modified-p nil)       (setq buffer-read-only t)
         (raise-frame (selected-frame))    (select-window this-window)))))
-
-(defun org-notify-body-text (deadline)
-  "Make human readable string for remaining time to deadline.
-This time in seconds is provided by DEADLINE."
-  (require 'gnus-art)
-  (replace-regexp-in-string
-   " in the future" ""
-   (article-lapsed-string (time-add (current-time)
-                                    (seconds-to-time deadline))
-                          2)))
 
 (defun org-notify-action-notify (plist)
   "Pop up a notification window."
