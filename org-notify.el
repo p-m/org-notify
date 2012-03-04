@@ -335,6 +335,13 @@ org-notify window. Mostly copied from `appt-select-lowest-window'."
     (setq org-notify-on-action-map
           (plist-put org-notify-on-action-map id plist))))
 
+(defun org-notify-action-notify/window (plist)
+  "For a graphics display, pop up a notification window, for a text
+terminal an emacs window."
+  (if (display-graphic-p)
+      (org-notify-action-notify plist)
+    (org-notify-action-window plist)))
+
 ;;; Provide a minimal default setup.
 (org-notify-add 'default '(:time "1h" :actions org-notify-action-message
                            :period "2m"))
