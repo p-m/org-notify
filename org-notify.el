@@ -73,8 +73,8 @@
 (defvar org-notify-timer nil
   "Timer of the notification daemon.")
 
-(defvar org-notify-parse-file
-  "Current file, that `org-element-parse-buffer' is parsing.")
+(defvar org-notify-parse-file nil
+  "Index of current file, that `org-element-parse-buffer' is parsing.")
 
 (defvar org-notify-on-action-map nil
   "Mapping between on-action identifiers and parameter lists.")
@@ -102,22 +102,26 @@
            result)
       (when (and (eq (get :todo-type) 'todo) heading deadline)
         (pr :heading heading)     (pr :notify (intern notify))
-        (pr :begin (get :begin))  (pr :file org-notify-parse-file)
+        (pr :begin (get :begin))
+        (pr :file (nth org-notify-parse-file (org-agenda-files 'unrestricted)))
         (pr :timestamp deadline)  (pr :uid (md5 (concat heading deadline)))
         (pr :deadline (- (org-time-string-to-seconds deadline)
                          (org-float-time))))
       result)))
 
 (defun org-notify-todo-list ()
-  "Create the todo-list."
-  (let ((files (org-agenda-files 'unrestricted)) result)
-    (dolist (org-notify-parse-file files result)
-      (save-excursion
-        (with-current-buffer (find-file-noselect org-notify-parse-file)
-          (setq result (append result (org-element-map
-                                       (org-element-parse-buffer 'headline)
-                                       'headline 'org-notify-make-todo))))))
-    result))
+  "Create the todo-list for one org-agenda file."
+  (let* ((files (org-agenda-files 'unrestricted))
+         (max (1- (length files))))
+    (setq org-notify-parse-file
+          (if (or (not org-notify-parse-file) (>= org-notify-parse-file max))
+              0
+            (1+ org-notify-parse-file)))
+    (save-excursion
+      (with-current-buffer (find-file-noselect
+                            (nth org-notify-parse-file files))
+        (org-element-map (org-element-parse-buffer 'headline)
+                         'headline 'org-notify-make-todo)))))
 
 (defun org-notify-maybe-too-late (diff period heading)
   "Print waring message, when notified significantly later than defined by
@@ -180,13 +184,14 @@ ones, whose names are prefixed with `org-notify-action-'."
   (setq org-notify-map (plist-put org-notify-map name params)))
 
 (defun org-notify-start (&optional secs)
-  "Start the notification daemon. If SECS is positive, it's the period in
-seconds for processing the notifications, and if negative, notifications
-will be checked only when emacs is idle for -SECS seconds. The default value
-for SECS is 50."
+  "Start the notification daemon. If SECS is positive, it's the
+period in seconds for processing the notifications of one
+org-agenda file, and if negative, notifications will be checked
+only when emacs is idle for -SECS seconds. The default value for
+SECS is 20."
   (if org-notify-timer
       (org-notify-stop))
-  (setq secs (or secs 50)
+  (setq secs (or secs 20)
         org-notify-timer (if (< secs 0)
                              (run-with-idle-timer (* -1 secs) t
                                                   'org-notify-process)
@@ -202,14 +207,14 @@ for SECS is 50."
   "User wants to see action."
   (save-excursion
     (with-current-buffer (find-file-noselect (plist-get plist :file))
-      (show-all)
-      (goto-char (plist-get plist :begin))
-      (search-forward "DEADLINE: <")
-      (cond
-       ((string-equal key "done")  (org-todo))
-       ((string-equal key "hour")  (org-timestamp-change 60 'minute))
-       ((string-equal key "day")   (org-timestamp-up-day))
-       ((string-equal key "week")  (org-timestamp-change 7 'day))))))
+      (org-with-wide-buffer
+       (goto-char (plist-get plist :begin))
+       (search-forward "DEADLINE: <")
+       (cond
+        ((string-equal key "done")  (org-todo))
+        ((string-equal key "hour")  (org-timestamp-change 60 'minute))
+        ((string-equal key "day")   (org-timestamp-up-day))
+        ((string-equal key "week")  (org-timestamp-change 7 'day)))))))
 
 (defun org-notify-on-action-notify (id key)
   "User wants to see action after mouse-click in notify window."
@@ -300,8 +305,8 @@ org-notify window. Mostly copied from `appt-select-lowest-window'."
           (switch-to-buffer buf))
         (setq buffer-read-only nil  buffer-undo-list t)
         (erase-buffer)
-        (insert (format "TODO: %s, in %d seconds.\n"
-                        (get :heading) (get :deadline)))
+        (insert (format "TODO: %s, %s.\n" (get :heading)
+                        (org-notify-body-text (get :deadline))))
         (let ((timer (run-with-timer (or (get :duration) 10) nil
                                      'org-notify-delete-window buf)))
           (dotimes (i (/ (length org-notify-actions) 2))
