@@ -60,6 +60,16 @@
 (declare-function notifications-notify  "notifications" (&rest prms))
 (declare-function article-lapsed-string "gnus-art"      (t &optional ms))
 
+(defgroup org-notify nil
+  "Options for Org-mode notifications."
+  :tag "Org Notify"
+  :group 'org)
+
+(defcustom org-notify-audible t
+  "Non-nil means beep to indicate notification."
+  :type 'boolean
+  :group 'org-notify)
+
 (defconst org-notify-actions '("done" "done" "hour" "one hour later" "day"
                                "one day later" "week" "one week later")
   "Possible actions for call-back functions.")
@@ -148,6 +158,10 @@ forgotten tasks."
                              (org-notify-maybe-too-late diff period heading)))
                 (setq prms (plist-put prms last-run-sym now)
                       plist (append todo prms))
+                (if (if (plist-member prms :audible)
+                        (prm :audible)
+                      org-notify-audible)
+                    (ding))
                 (unless (listp actions)
                   (setq actions (list actions)))
                 (dolist (action actions)
@@ -178,6 +192,7 @@ List of possible parameters:
              format as :time.
   :duration  Some actions use this parameter to specify the duration of the
              notification. It's an integral number in seconds.
+  :audible   Overwrite the value of `org-notify-audible' for this action.
 
 For the actions, you can use your own functions or some of the predefined
 ones, whose names are prefixed with `org-notify-action-'."
@@ -321,8 +336,6 @@ org-notify window. Mostly copied from `appt-select-lowest-window'."
 
 (defun org-notify-action-notify (plist)
   "Pop up a notification window."
-; todo perhaps: dbus-unregister-service for NotificationClosed to
-; prevent resetting idle-time
   (require 'notifications)
   (let* ((duration (plist-get plist :duration))
          (id (notifications-notify
@@ -330,8 +343,7 @@ org-notify window. Mostly copied from `appt-select-lowest-window'."
               :body      (org-notify-body-text (plist-get plist :deadline))
               :timeout   (if duration (* duration 1000))
               :actions   org-notify-actions
-              :on-action 'org-notify-on-action-notify
-              :on-close  'org-notify-on-close)))
+              :on-action 'org-notify-on-action-notify)))
     (setq org-notify-on-action-map
           (plist-put org-notify-on-action-map id plist))))
 
