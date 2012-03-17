@@ -265,20 +265,21 @@ SECS is 20."
     (run-with-timer (or (plist-get plist :duration) 3) nil
                     'cancel-timer timer)))
 
-(defun org-notify-body-text (deadline)
-  "Make human readable string for remaining time to deadline.
-This time in seconds is provided by DEADLINE."
+(defun org-notify-body-text (plist)
+  "Make human readable string for remaining time to deadline."
   (require 'gnus-art)
-  (replace-regexp-in-string
-   " in the future" ""
-   (article-lapsed-string (time-add (current-time)
-                                    (seconds-to-time deadline))
-                          2)))
+  (format "%s\n(%s)"
+          (replace-regexp-in-string
+           " in the future" ""
+           (article-lapsed-string
+            (time-add (current-time)
+                      (seconds-to-time (plist-get plist :deadline))) 2))
+          (plist-get plist :timestamp)))
 
 (defun org-notify-action-email (plist)
   "Send email to user."
   (compose-mail user-mail-address (concat "TODO: " (plist-get plist :heading)))
-  (insert (org-notify-body-text (plist-get plist :deadline)))
+  (insert (org-notify-body-text plist))
   (funcall send-mail-function)
   (flet ((yes-or-no-p (prompt) t))
     (kill-buffer)))
@@ -321,7 +322,7 @@ org-notify window. Mostly copied from `appt-select-lowest-window'."
         (setq buffer-read-only nil  buffer-undo-list t)
         (erase-buffer)
         (insert (format "TODO: %s, %s.\n" (get :heading)
-                        (org-notify-body-text (get :deadline))))
+                        (org-notify-body-text plist)))
         (let ((timer (run-with-timer (or (get :duration) 10) nil
                                      'org-notify-delete-window buf)))
           (dotimes (i (/ (length org-notify-actions) 2))
@@ -340,7 +341,7 @@ org-notify window. Mostly copied from `appt-select-lowest-window'."
   (let* ((duration (plist-get plist :duration))
          (id (notifications-notify
               :title     (plist-get plist :heading)
-              :body      (org-notify-body-text (plist-get plist :deadline))
+              :body      (org-notify-body-text plist)
               :timeout   (if duration (* duration 1000))
               :actions   org-notify-actions
               :on-action 'org-notify-on-action-notify)))
@@ -355,8 +356,8 @@ terminal an emacs window."
     (org-notify-action-window plist)))
 
 ;;; Provide a minimal default setup.
-(org-notify-add 'default '(:time "1h" :actions org-notify-action-message
-                           :period "2m"))
+(org-notify-add 'default '(:time "1h" :actions -notify/window
+                           :period "2m" :duration 60))
 
 (provide 'org-notify)
 
