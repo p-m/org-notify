@@ -230,7 +230,9 @@ SECS is 20."
            (goto-char begin)
            (show-entry))
           (goto-char begin)
-          (search-forward "DEADLINE: <"))
+          (search-forward "DEADLINE: <")
+          (if (display-graphic-p)
+              (x-focus-frame nil)))
       (save-excursion
         (with-current-buffer (find-file-noselect file)
           (org-with-wide-buffer
