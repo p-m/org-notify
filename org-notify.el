@@ -70,8 +70,9 @@
   :type 'boolean
   :group 'org-notify)
 
-(defconst org-notify-actions '("done" "done" "hour" "one hour later" "day"
-                               "one day later" "week" "one week later")
+(defconst org-notify-actions
+  '("show" "show" "done" "done" "hour" "one hour later" "day" "one day later"
+    "week" "one week later")
   "Possible actions for call-back functions.")
 
 (defconst org-notify-window-buffer-name "*org-notify-%s*"
@@ -220,16 +221,26 @@ SECS is 20."
 
 (defun org-notify-on-action (plist key)
   "User wants to see action."
-  (save-excursion
-    (with-current-buffer (find-file-noselect (plist-get plist :file))
-      (org-with-wide-buffer
-       (goto-char (plist-get plist :begin))
-       (search-forward "DEADLINE: <")
-       (cond
-        ((string-equal key "done")  (org-todo))
-        ((string-equal key "hour")  (org-timestamp-change 60 'minute))
-        ((string-equal key "day")   (org-timestamp-up-day))
-        ((string-equal key "week")  (org-timestamp-change 7 'day)))))))
+  (let ((file (plist-get plist :file))
+        (begin (plist-get plist :begin)))
+    (if (string-equal key "show")
+        (progn
+          (switch-to-buffer (find-file-noselect file))
+          (org-with-wide-buffer
+           (goto-char begin)
+           (show-entry))
+          (goto-char begin)
+          (search-forward "DEADLINE: <"))
+      (save-excursion
+        (with-current-buffer (find-file-noselect file)
+          (org-with-wide-buffer
+           (goto-char begin)
+           (search-forward "DEADLINE: <")
+           (cond
+            ((string-equal key "done")  (org-todo))
+            ((string-equal key "hour")  (org-timestamp-change 60 'minute))
+            ((string-equal key "day")   (org-timestamp-up-day))
+            ((string-equal key "week")  (org-timestamp-change 7 'day)))))))))
 
 (defun org-notify-on-action-notify (id key)
   "User wants to see action after mouse-click in notify window."
