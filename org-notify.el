@@ -267,7 +267,8 @@ seconds.  The default value for SECS is 20."
            (goto-char begin)
            (search-forward "DEADLINE: <")
            (cond
-            ((string-equal key "done")  (org-todo))
+            ((string-equal key "done")
+             (let ((org-loop-over-headlines-in-active-region nil)) (org-todo)))
             ((string-equal key "hour")  (org-timestamp-change 60 'minute))
             ((string-equal key "day")   (org-timestamp-up-day))
             ((string-equal key "week")  (org-timestamp-change 7 'day)))))))))
