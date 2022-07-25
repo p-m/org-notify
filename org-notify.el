@@ -317,8 +317,7 @@ seconds.  The default value for SECS is 20."
           (replace-regexp-in-string
            " in the future" ""
            (article-lapsed-string
-            (time-add (current-time)
-                      (seconds-to-time (plist-get plist :deadline))) 2))
+            (time-add nil (seconds-to-time (plist-get plist :deadline))) 2))
           (plist-get plist :timestamp)))
 
 (defun org-notify-action-email (plist)
