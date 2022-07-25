@@ -1,6 +1,6 @@
-;;; org-notify.el --- Notifications for Org-mode
+;;; org-notify.el --- Notifications for Org-mode  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2012-2021  Free Software Foundation, Inc.
+;; Copyright (C) 2012-2022  Free Software Foundation, Inc.
 
 ;; Author: Peter Münster <pmrb@free.fr>
 ;; Keywords: notification, todo-list, alarm, reminder, pop-up, calendar
@@ -74,13 +74,11 @@
 
 (defcustom org-notify-audible t
   "Non-nil means beep to indicate notification."
-  :type 'boolean
-  :group 'org-notify)
+  :type 'boolean)
 
 (defcustom org-notify-max-notifications-per-run 3
   "Maximum number of notifications per run of `org-notify-process'."
-  :type 'integer
-  :group 'org-notify)
+  :type 'integer)
 
 (defconst org-notify-actions
   '("show" "show" "done" "done" "hour" "one hour later" "day" "one day later"
@@ -124,7 +122,7 @@ simple timestamp string."
 				(plist-get (plist-get orig 'timestamp)
 					   :raw-value))))
 
-(defun org-notify-make-todo (heading &rest ignored)
+(defun org-notify-make-todo (heading &rest _ignored)
   "Create one todo item."
   (cl-macrolet ((get (k) `(plist-get list ,k))
              (pr (k v) `(setq result (plist-put result ,k ,v))))
@@ -232,7 +230,7 @@ ones, whose names are prefixed with `org-notify-action-'."
   "Start the notification daemon.
 If SECS is positive, it's the period in seconds for processing
 the notifications of one org-agenda file, and if negative,
-notifications will be checked only when emacs is idle for -SECS
+notifications will be checked only when Emacs is idle for -SECS
 seconds.  The default value for SECS is 20."
   (interactive)
   (if org-notify-timer
@@ -240,8 +238,8 @@ seconds.  The default value for SECS is 20."
   (setq secs (or secs 20)
         org-notify-timer (if (< secs 0)
                              (run-with-idle-timer (* -1 secs) t
-                                                  'org-notify-process)
-                           (run-with-timer secs secs 'org-notify-process))))
+                                                  #'org-notify-process)
+                           (run-with-timer secs secs #'org-notify-process))))
 
 (defun org-notify-stop ()
   "Stop the notification daemon."
@@ -291,11 +289,12 @@ seconds.  The default value for SECS is 20."
 (defun org-notify-delete-window (buffer)
   "Delete the notification window."
   (require 'appt)
+  (defvar appt-buffer-name) (defvar appt-audible)
   (let ((appt-buffer-name buffer)
         (appt-audible nil))
     (appt-delete-window)))
 
-(defun org-notify-on-close (id reason)
+(defun org-notify-on-close (id _reason)
   "Notification window has been closed."
   (setq org-notify-on-action-map (plist-put org-notify-on-action-map id nil)))
 
@@ -306,9 +305,9 @@ seconds.  The default value for SECS is 20."
 
 (defun org-notify-action-ding (plist)
   "Make noise."
-  (let ((timer (run-with-timer 0 1 'ding)))
+  (let ((timer (run-with-timer 0 1 #'ding)))
     (run-with-timer (or (plist-get plist :duration) 3) nil
-                    'cancel-timer timer)))
+                    #'cancel-timer timer)))
 
 (defun org-notify-body-text (plist)
   "Make human readable string for remaining time to deadline."
@@ -325,7 +324,7 @@ seconds.  The default value for SECS is 20."
   (compose-mail user-mail-address (concat "TODO: " (plist-get plist :heading)))
   (insert (org-notify-body-text plist))
   (funcall send-mail-function)
-  (cl-letf (((symbol-function 'yes-or-no-p) (lambda (x) t)))
+  (cl-letf (((symbol-function 'yes-or-no-p) (lambda (_) t)))
     (kill-buffer)))
 
 (defun org-notify-select-highest-window ()
@@ -368,7 +367,7 @@ org-notify window.  Mostly copied from `appt-select-lowest-window'."
         (insert (format "TODO: %s, %s.\n" (get :heading)
                         (org-notify-body-text plist)))
         (let ((timer (run-with-timer (or (get :duration) 10) nil
-                                     'org-notify-delete-window buf)))
+                                     #'org-notify-delete-window buf)))
           (dotimes (i (/ (length org-notify-actions) 2))
             (let ((key (nth (* i 2) org-notify-actions))
                   (text (nth (1+ (* i 2)) org-notify-actions)))
@@ -395,7 +394,7 @@ org-notify window.  Mostly copied from `appt-select-lowest-window'."
 
 (defun org-notify-action-notify/window (plist)
   "For a graphics display, pop up a notification window, for a text
-terminal an emacs window."
+terminal an Emacs window."
   (if (display-graphic-p)
       (org-notify-action-notify plist)
     (org-notify-action-window plist)))
