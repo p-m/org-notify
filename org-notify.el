@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2012-2022  Free Software Foundation, Inc.
 
-;; Author: Peter Münster <pmrb@free.fr>
+;; Author: Peter Münster <pm@a16n.net>
 ;; Keywords: notification, todo-list, alarm, reminder, pop-up, calendar
 ;; Version: 0.1.0
 ;; Package-Requires: ((emacs "25.1"))
