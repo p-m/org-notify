@@ -196,8 +196,7 @@ forgotten tasks."
                           (prm :audible)
 			org-notify-audible)
                       (ding))
-                  (unless (listp actions)
-                    (setq actions (list actions)))
+                  (setq actions (ensure-list actions))
 		  (cl-incf notification-cnt)
                   (dolist (action actions)
                     (funcall (if (fboundp action) action
