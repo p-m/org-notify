@@ -43,11 +43,11 @@
 ;;
 ;; (org-notify-add 'appt
 ;;                 '(:time "-1s" :period "20s" :duration 10
-;;                   :actions (-message -ding))
+;;                   :actions (org-notify-action-message ding))
 ;;                 '(:time "15m" :period "2m" :duration 100
-;;                   :actions -notify)
-;;                 '(:time "2h" :period "5m" :actions -message)
-;;                 '(:time "3d" :actions -email))
+;;                   :actions notify)
+;;                 '(:time "2h" :period "5m" :actions org-notify-action-message)
+;;                 '(:time "3d" :actions email))
 ;;
 ;; This means for todo-items with `notify' property set to `appt': 3 days
 ;; before deadline, send a reminder-email, 2 hours before deadline, start to
