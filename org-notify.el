@@ -153,7 +153,7 @@ simple timestamp string."
         (pr :begin (get :begin))
         (pr :file (nth org-notify-parse-file (org-agenda-files 'unrestricted)))
         (pr :timestamp timestamp)
-        (pr :uid (md5 (concat heading timestamp (symbol-name type))))
+        (pr :uid (secure-hash 'sha256 (concat heading timestamp (symbol-name type))))
         (pr :deadline (- (org-time-string-to-seconds timestamp)
                          (float-time)))
         (pr :type type))
