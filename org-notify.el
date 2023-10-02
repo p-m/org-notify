@@ -62,9 +62,6 @@
 
 ;; - Make use of https://github.com/jwiegley/alert in
 ;;   org-notify-action-message.
-;; - Make it configurable, from where to get the timestamp
-;;   (DEADLINE and/or SCHEDULED). See also
-;;   https://lists.gnu.org/archive/html/emacs-orgmode/2016-06/msg00064.html
 ;; - Since character positions can be wrong, when you add something at the
 ;;   beginning of the org-file, use markers instead.
 ;; - Options for procrastination (e.g. "do it tomorrow") should be more
