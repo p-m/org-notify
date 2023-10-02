@@ -93,6 +93,11 @@
   "Maximum number of notifications per run of `org-notify-process'."
   :type 'integer)
 
+(defcustom org-notify-timestamp-type '(:deadline)
+  "Types of timestamps to be notified of"
+  :type '(set (const :deadline)
+              (const :scheduled)))
+
 (defconst org-notify-actions
   '("show" "show" "done" "done" "hour" "one hour later" "day" "one day later"
     "week" "one week later")
@@ -127,29 +132,31 @@
          (cdr (assoc (match-string 3 str) conv))
          (if (= (length (match-string 1 str)) 1) -1 1)))))
 
-(defun org-notify-convert-deadline (orig)
-  "Convert original deadline from `org-element-parse-buffer' to
+(defun org-notify-convert-timestamp (orig)
+  "Convert original timestamp from `org-element-parse-buffer' to
 simple timestamp string."
   (if orig
       (replace-regexp-in-string "^<\\|>$" ""
 				(plist-get (plist-get orig 'timestamp)
 					   :raw-value))))
 
-(defun org-notify-make-todo (heading &rest _ignored)
+(defun org-notify-make-todo (type node &rest _ignored)
   "Create one todo item."
-  (cl-macrolet ((get (k) `(plist-get list ,k))
-             (pr (k v) `(setq result (plist-put result ,k ,v))))
-    (let* ((list (nth 1 heading))      (notify (or (get :NOTIFY) "default"))
-           (deadline (org-notify-convert-deadline (get :deadline)))
+  (cl-macrolet ((get (k) `(org-element-property ,k node))
+                (pr (k v) `(setq result (plist-put result ,k ,v))))
+    (let* ((notify (or (get :NOTIFY) "default"))
+           (timestamp (org-notify-convert-timestamp (get type)))
 	   (heading (get :raw-value))
            result)
-      (when (and (eq (get :todo-type) 'todo) heading deadline)
+      (when (and (eq (get :todo-type) 'todo) heading timestamp)
         (pr :heading heading)     (pr :notify (intern notify))
         (pr :begin (get :begin))
         (pr :file (nth org-notify-parse-file (org-agenda-files 'unrestricted)))
-        (pr :timestamp deadline)  (pr :uid (md5 (concat heading deadline)))
-        (pr :deadline (- (org-time-string-to-seconds deadline)
-                         (float-time))))
+        (pr :timestamp timestamp)
+        (pr :uid (md5 (concat heading timestamp (symbol-name type))))
+        (pr :deadline (- (org-time-string-to-seconds timestamp)
+                         (float-time)))
+        (pr :type type))
       result)))
 
 (defun org-notify-todo-list ()
@@ -163,9 +170,12 @@ simple timestamp string."
 	      (1+ org-notify-parse-file)))
       (save-excursion
 	(with-current-buffer (find-file-noselect
-			      (nth org-notify-parse-file files))
-	  (org-element-map (org-element-parse-buffer 'headline)
-	      'headline 'org-notify-make-todo))))))
+		              (nth org-notify-parse-file files))
+          (let ((node (org-element-parse-buffer 'headline)))
+	    (mapcan (lambda (type)
+                      (org-element-map node
+	                  'headline (apply-partially #'org-notify-make-todo type)))
+                    org-notify-timestamp-type)))))))
 
 (defun org-notify-maybe-too-late (diff period heading)
   "Print warning message, when notified significantly later than defined by
@@ -262,7 +272,10 @@ seconds.  The default value for SECS is 20."
 (defun org-notify-on-action (plist key)
   "User wants to see action."
   (let ((file (plist-get plist :file))
-        (begin (plist-get plist :begin)))
+        (begin (plist-get plist :begin))
+        (search-prefix (pcase (plist-get plist :type)
+                         (:deadline "DEADLINE")
+                         (:scheduled "SCHEDULED"))))
     (if (string-equal key "show")
         (progn
           (switch-to-buffer (find-file-noselect file))
@@ -270,7 +283,7 @@ seconds.  The default value for SECS is 20."
            (goto-char begin)
            (outline-show-entry))
           (goto-char begin)
-          (search-forward "DEADLINE: <")
+          (search-forward (concat search-prefix ": <"))
           (search-forward ":")
           (if (display-graphic-p)
               (x-focus-frame nil)))
@@ -278,7 +291,7 @@ seconds.  The default value for SECS is 20."
         (with-current-buffer (find-file-noselect file)
           (org-with-wide-buffer
            (goto-char begin)
-           (search-forward "DEADLINE: <")
+           (search-forward (concat search-prefix ": <"))
            (cond
             ((string-equal key "done")
              (let ((org-loop-over-headlines-in-active-region nil)) (org-todo)))
