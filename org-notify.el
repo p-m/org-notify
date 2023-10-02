@@ -90,8 +90,8 @@
   "Maximum number of notifications per run of `org-notify-process'."
   :type 'integer)
 
-(defcustom org-notify-timestamp-type '(:deadline)
-  "Types of timestamps to be notified of"
+(defcustom org-notify-timestamp-types '(:deadline)
+  "Types of timestamps to be notified of."
   :type '(set (const :deadline)
               (const :scheduled)))
 
@@ -172,7 +172,7 @@ simple timestamp string."
 	    (mapcan (lambda (type)
                       (org-element-map node
 	                  'headline (apply-partially #'org-notify-make-todo type)))
-                    org-notify-timestamp-type)))))))
+                    org-notify-timestamp-types)))))))
 
 (defun org-notify-maybe-too-late (diff period heading)
   "Print warning message, when notified significantly later than defined by
