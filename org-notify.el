@@ -134,8 +134,8 @@
 simple timestamp string."
   (if orig
       (replace-regexp-in-string "^<\\|>$" ""
-				(plist-get (plist-get orig 'timestamp)
-					   :raw-value))))
+                                (plist-get (plist-get orig 'timestamp)
+                                           :raw-value))))
 
 (defun org-notify-make-todo (type elt &rest _ignored)
   "Create one todo item."
@@ -143,7 +143,7 @@ simple timestamp string."
                 (pr (k v) `(setq result (plist-put result ,k ,v))))
     (let* ((notify    (or (get :NOTIFY) "default"))
            (timestamp (org-notify-convert-timestamp (get type)))
-	   (heading   (get :raw-value))
+           (heading   (get :raw-value))
            result)
       (when (and (eq (get :todo-type) 'todo) heading timestamp)
         (pr :heading heading)     (pr :notify (intern notify))
@@ -162,14 +162,14 @@ simple timestamp string."
          (max (1- (length files))))
     (when files
       (setq org-notify-parse-file
-	    (if (or (not org-notify-parse-file) (>= org-notify-parse-file max))
-		0
-	      (1+ org-notify-parse-file)))
+            (if (or (not org-notify-parse-file) (>= org-notify-parse-file max))
+                0
+              (1+ org-notify-parse-file)))
       (save-excursion
-	(with-current-buffer (find-file-noselect
-		              (nth org-notify-parse-file files))
+        (with-current-buffer (find-file-noselect
+                              (nth org-notify-parse-file files))
           (let ((parse-tree (org-element-parse-buffer 'headline)))
-	    (mapcan (lambda (type)
+            (mapcan (lambda (type)
                       (org-element-map parse-tree 'headline
                         (apply-partially #'org-notify-make-todo type)))
                     org-notify-timestamp-types)))))))
@@ -187,7 +187,7 @@ forgotten tasks."
   (let ((notification-cnt 0))
     (cl-macrolet ((prm (k) `(plist-get prms ,k))  (td (k) `(plist-get todo ,k)))
       (dolist (todo (org-notify-todo-list))
-	(let* ((deadline (td :deadline))  (heading (td :heading))
+        (let* ((deadline (td :deadline))  (heading (td :heading))
                (uid (td :uid))            (last-run-sym
                                            (intern (concat ":last-run-" uid))))
           (cl-dolist (prms (plist-get org-notify-map (td :notify)))
@@ -195,25 +195,26 @@ forgotten tasks."
               (let ((period (org-notify-string->seconds (prm :period)))
                     (last-run (prm last-run-sym))  (now (float-time))
                     (actions (prm :actions))       diff  plist)
-		(when (or (not last-run)
+                (when (or (not last-run)
                           (and period (< period (setq diff (- now last-run)))
                                (org-notify-maybe-too-late diff period heading)))
                   (setq prms (plist-put prms last-run-sym now)
-			plist (append todo prms))
+                        plist (append todo prms))
                   (if (if (plist-member prms :audible)
                           (prm :audible)
-			org-notify-audible)
+                        org-notify-audible)
                       (ding))
                   (setq actions (ensure-list actions))
-		  (cl-incf notification-cnt)
+                  (cl-incf notification-cnt)
                   (dolist (action actions)
                     (funcall (if (fboundp action) action
                                (intern (concat "org-notify-action"
                                                (symbol-name action))))
-			     plist))
-		  (when (>= notification-cnt org-notify-max-notifications-per-run)
-		    (cl-return-from org-notify-process))))
-	      (cl-return))))))))
+                             plist))
+                  (when (>= notification-cnt
+                            org-notify-max-notifications-per-run)
+                    (cl-return-from org-notify-process))))
+              (cl-return))))))))
 
 (defun org-notify-add (name &rest params)
   "Add a new notification type.
@@ -423,7 +424,7 @@ terminal an Emacs window."
 
 ;;; Provide a minimal default setup.
 (org-notify-add 'default '(:time "1h" :actions -notify/window
-				 :period "2m" :duration 60))
+                                 :period "2m" :duration 60))
 
 (provide 'org-notify)
 
