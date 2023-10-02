@@ -336,8 +336,8 @@ seconds.  The default value for SECS is 20."
   (compose-mail user-mail-address (concat "TODO: " (plist-get plist :heading)))
   (insert (org-notify-body-text plist))
   (funcall send-mail-function)
-  (cl-letf (((symbol-function 'yes-or-no-p) (lambda (_) t)))
-    (kill-buffer)))
+  (set-visited-file-name nil)
+  (kill-buffer))
 
 (defun org-notify-select-highest-window ()
   "Select the highest window on the frame, that is not is not an
