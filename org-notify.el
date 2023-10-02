@@ -137,13 +137,13 @@ simple timestamp string."
 				(plist-get (plist-get orig 'timestamp)
 					   :raw-value))))
 
-(defun org-notify-make-todo (type node &rest _ignored)
+(defun org-notify-make-todo (type elt &rest _ignored)
   "Create one todo item."
-  (cl-macrolet ((get (k) `(org-element-property ,k node))
+  (cl-macrolet ((get (k) `(org-element-property ,k elt))
                 (pr (k v) `(setq result (plist-put result ,k ,v))))
-    (let* ((notify (or (get :NOTIFY) "default"))
+    (let* ((notify    (or (get :NOTIFY) "default"))
            (timestamp (org-notify-convert-timestamp (get type)))
-	   (heading (get :raw-value))
+	   (heading   (get :raw-value))
            result)
       (when (and (eq (get :todo-type) 'todo) heading timestamp)
         (pr :heading heading)     (pr :notify (intern notify))
@@ -168,10 +168,10 @@ simple timestamp string."
       (save-excursion
 	(with-current-buffer (find-file-noselect
 		              (nth org-notify-parse-file files))
-          (let ((node (org-element-parse-buffer 'headline)))
+          (let ((parse-tree (org-element-parse-buffer 'headline)))
 	    (mapcan (lambda (type)
-                      (org-element-map node
-	                  'headline (apply-partially #'org-notify-make-todo type)))
+                      (org-element-map parse-tree 'headline
+                        (apply-partially #'org-notify-make-todo type)))
                     org-notify-timestamp-types)))))))
 
 (defun org-notify-maybe-too-late (diff period heading)
