@@ -1,10 +1,10 @@
 ;;; org-notify.el --- Notifications for Org-mode  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2012-2022  Free Software Foundation, Inc.
+;; Copyright (C) 2012-2023  Free Software Foundation, Inc.
 
 ;; Author: Peter Münster <pm@a16n.net>
 ;; Keywords: notification, todo-list, alarm, reminder, pop-up, calendar
-;; Version: 0.1.0
+;; Version: 0.1.1
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://github.com/p-m/org-notify
 
