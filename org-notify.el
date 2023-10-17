@@ -68,6 +68,15 @@
 ;;   configurable.
 ;; - Add support for tags as in https://github.com/p-m/org-notify/issues/7.
 
+;;;; News:
+
+;;;;; Changes since 0.1.1:
+
+;;;;; Changes since 0.1.0:
+
+;; - Add support for SCHEDULED timestamps with new option
+;;   `org-notify-timestamp-types'.
+
 ;;; Code:
 
 (eval-when-compile (require 'cl-lib))
