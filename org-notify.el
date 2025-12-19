@@ -62,8 +62,6 @@
 
 ;; - Make use of https://github.com/jwiegley/alert in
 ;;   org-notify-action-message.
-;; - Since character positions can be wrong, when you add something at the
-;;   beginning of the org-file, use markers instead.
 ;; - Options for procrastination (e.g. "do it tomorrow") should be more
 ;;   configurable.
 ;; - Add support for tags as in https://github.com/p-m/org-notify/issues/7.
@@ -73,6 +71,7 @@
 ;;;;; Changes since 0.1.1:
 
 ;; - Add support for turning off uncritical notifications.
+;; - Positions are saved in markers now.
 
 ;;;;; Changes since 0.1.0:
 
@@ -171,7 +170,7 @@ simple timestamp string."
            result)
       (when (and (eq (get :todo-type) 'todo) heading timestamp)
         (pr :heading heading)     (pr :notify (intern notify))
-        (pr :begin (get :begin))
+        (pr :marker (set-marker (make-marker) (+ (get :begin) 4)))
         (pr :file (nth org-notify-parse-file (org-agenda-files 'unrestricted)))
         (pr :timestamp timestamp)
         (pr :uid (md5 (concat heading timestamp (symbol-name type))))
@@ -302,7 +301,7 @@ seconds.  The default value for SECS is 20."
 (defun org-notify-on-action (plist key)
   "User wants to see action."
   (let ((file (plist-get plist :file))
-        (begin (plist-get plist :begin))
+        (begin (plist-get plist :marker))
         (search-prefix (pcase (plist-get plist :type)
                          (:deadline "DEADLINE")
                          (:scheduled "SCHEDULED"))))
