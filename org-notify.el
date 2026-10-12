@@ -68,6 +68,10 @@
 
 ;;;; News:
 
+;;;;; Changes since 0.1.3:
+
+;; - Bug-fix with checking for dbusbind.
+
 ;;;;; Changes since 0.1.2:
 
 ;; - Make org-notify support macOS without DBus.
@@ -438,7 +442,7 @@ org-notify window.  Mostly copied from `appt-select-lowest-window'."
 (defun org-notify-action-notify (plist)
   "Pop up a notification window."
   (require 'notifications)
-  (cond ((and (featurep 'dbus) (boundp 'dbusbind))
+  (cond ((and (featurep 'dbus) (featurep 'dbusbind))
          (let* ((duration (plist-get plist :duration))
                 (id (notifications-notify
                      :title     (plist-get plist :heading)
