@@ -60,8 +60,6 @@
 
 ;;; Todo:
 
-;; - Make use of https://github.com/jwiegley/alert in
-;;   org-notify-action-message.
 ;; - Options for procrastination (e.g. "do it tomorrow") should be more
 ;;   configurable.
 ;; - Add support for tags as in https://github.com/p-m/org-notify/issues/7.
